@@ -49,10 +49,11 @@ dev = [
     "ruff",
 ]
 docs = [
-    "sphinx>=7.0",
+    "sphinx>=7.0,<9",
     "sphinx-rtd-theme>=2.0",
     "sphinx-copybutton",
     "myst-parser",
+    "python-dotenv",
 ]
 
 [project.urls]

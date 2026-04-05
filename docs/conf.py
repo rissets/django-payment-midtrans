@@ -11,6 +11,17 @@ sys.path.insert(0, os.path.abspath("../example"))
 # Mock Django setup for autodoc
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "example.config.settings")
 
+# Ensure dotenv doesn't fail if .env file is missing
+os.environ.setdefault("MIDTRANS_SERVER_KEY", "")
+os.environ.setdefault("MIDTRANS_CLIENT_KEY", "")
+os.environ.setdefault("MIDTRANS_MERCHANT_ID", "")
+os.environ.setdefault("MIDTRANS_IS_PRODUCTION", "False")
+os.environ.setdefault("MIDTRANS_NOTIFICATION_URL", "")
+os.environ.setdefault("CELERY_BROKER_URL", "memory://")
+os.environ.setdefault("DJANGO_SECRET_KEY", "sphinx-build-key")
+os.environ.setdefault("DJANGO_DEBUG", "True")
+os.environ.setdefault("DJANGO_ALLOWED_HOSTS", "*")
+
 import django
 try:
     django.setup()
