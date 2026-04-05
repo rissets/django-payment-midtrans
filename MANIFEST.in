@@ -1,0 +1,8 @@
+include LICENSE
+include README.md
+include CHANGELOG.md
+recursive-include django_midtrans *.py *.html *.txt
+recursive-include docs *.rst *.md *.py
+prune example
+prune .venv
+prune .git

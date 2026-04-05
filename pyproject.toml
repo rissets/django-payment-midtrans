@@ -48,11 +48,19 @@ dev = [
     "black",
     "ruff",
 ]
+docs = [
+    "sphinx>=7.0",
+    "sphinx-rtd-theme>=2.0",
+    "sphinx-copybutton",
+    "myst-parser",
+]
 
 [project.urls]
-Homepage = "https://github.com/danangharissetiawan/django-payment-midtrans"
-Documentation = "https://github.com/danangharissetiawan/django-payment-midtrans#readme"
-Repository = "https://github.com/danangharissetiawan/django-payment-midtrans"
+Homepage = "https://github.com/rissets/django-payment-midtrans"
+Documentation = "https://django-payment-midtrans.readthedocs.io"
+Repository = "https://github.com/rissets/django-payment-midtrans"
+Changelog = "https://github.com/rissets/django-payment-midtrans/blob/main/CHANGELOG.md"
+Issues = "https://github.com/rissets/django-payment-midtrans/issues"
 
 [tool.setuptools.packages.find]
 include = ["django_midtrans*"]

@@ -27,6 +27,6 @@ Thumbs.db
 
 # Pytest
 .pytest_cache/
-docs.md
 
-docs.md
+# Sphinx build output
+docs/_build/
