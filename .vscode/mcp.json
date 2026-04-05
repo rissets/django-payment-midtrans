@@ -1,0 +1,13 @@
+{
+  "servers": {
+    "midtrans": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["mcp-midtrans"]
+    },
+    "django-unfold": {
+      "command": "uvx",
+      "args": ["mcp-django-unfold"]
+    }
+  }
+}

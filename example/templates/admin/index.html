@@ -1,0 +1,112 @@
+{% extends 'admin/base.html' %}
+
+{% load i18n unfold %}
+
+{% block title %}
+    {% trans "Dashboard" %} | {{ site_title|default:_("Django site admin") }}
+{% endblock %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+    {% component "unfold/components/container.html" %}
+        {# Stats Cards #}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {% component "unfold/components/card.html" %}
+                {% component "unfold/components/text.html" %}
+                    {% trans "Total Payments" %}
+                {% endcomponent %}
+                {% component "unfold/components/title.html" %}
+                    {{ total_payments|default:"0" }}
+                {% endcomponent %}
+            {% endcomponent %}
+
+            {% component "unfold/components/card.html" %}
+                {% component "unfold/components/text.html" %}
+                    {% trans "Revenue" %}
+                {% endcomponent %}
+                {% component "unfold/components/title.html" %}
+                    Rp {{ total_revenue|default:"0"|floatformat:0 }}
+                {% endcomponent %}
+            {% endcomponent %}
+
+            {% component "unfold/components/card.html" %}
+                {% component "unfold/components/text.html" %}
+                    {% trans "Pending" %}
+                {% endcomponent %}
+                {% component "unfold/components/title.html" %}
+                    {{ pending_count|default:"0" }}
+                {% endcomponent %}
+            {% endcomponent %}
+
+            {% component "unfold/components/card.html" %}
+                {% component "unfold/components/text.html" %}
+                    {% trans "Today" %}
+                {% endcomponent %}
+                {% component "unfold/components/title.html" %}
+                    {{ today_count|default:"0" }}
+                {% endcomponent %}
+            {% endcomponent %}
+        </div>
+
+        {# Charts #}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+            {% component "unfold/components/card.html" with title=_("Revenue - Last 7 Days") %}
+                {% component "unfold/components/chart/line.html" with data=revenue_chart %}
+                {% endcomponent %}
+            {% endcomponent %}
+
+            {% component "unfold/components/card.html" with title=_("Payment Status") %}
+                {% component "unfold/components/chart/bar.html" with data=status_chart %}
+                {% endcomponent %}
+            {% endcomponent %}
+        </div>
+
+        {# Recent Payments #}
+        {% if recent_payments %}
+        {% component "unfold/components/card.html" with title=_("Recent Payments") %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b">
+                            <th class="text-left py-2 px-3 font-medium">{% trans "Order ID" %}</th>
+                            <th class="text-left py-2 px-3 font-medium">{% trans "Type" %}</th>
+                            <th class="text-right py-2 px-3 font-medium">{% trans "Amount" %}</th>
+                            <th class="text-left py-2 px-3 font-medium">{% trans "Status" %}</th>
+                            <th class="text-left py-2 px-3 font-medium">{% trans "Date" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in recent_payments %}
+                        <tr class="border-b">
+                            <td class="py-2 px-3 font-mono text-xs">
+                                <a href="{% url 'admin:django_midtrans_midtranspayment_change' p.pk %}">
+                                    {{ p.order_id|truncatechars:25 }}
+                                </a>
+                            </td>
+                            <td class="py-2 px-3">{{ p.get_payment_type_display }}</td>
+                            <td class="py-2 px-3 text-right font-medium">Rp {{ p.gross_amount|floatformat:0 }}</td>
+                            <td class="py-2 px-3">
+                                <span class="px-2 py-0.5 rounded text-xs font-semibold
+                                    {% if p.transaction_status == 'settlement' or p.transaction_status == 'capture' %}
+                                        text-green-700 bg-green-100
+                                    {% elif p.transaction_status == 'pending' %}
+                                        text-yellow-700 bg-yellow-100
+                                    {% else %}
+                                        text-red-700 bg-red-100
+                                    {% endif %}">
+                                    {{ p.get_transaction_status_display }}
+                                </span>
+                            </td>
+                            <td class="py-2 px-3 text-gray-500">{{ p.created_at|date:"d M H:i" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endcomponent %}
+        {% endif %}
+    {% endcomponent %}
+{% endblock %}

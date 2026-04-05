@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Payment Complete - Midtrans Shop{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto px-4 py-16 text-center">
+    {% if order %}
+    <div class="text-6xl mb-6">
+        {% if payment.is_paid %}🎉{% elif payment.is_pending %}⏳{% else %}ℹ️{% endif %}
+    </div>
+    <h1 class="text-3xl font-bold mb-4">
+        {% if payment.is_paid %}Payment Successful!
+        {% elif payment.is_pending %}Payment Processing
+        {% else %}Payment Received{% endif %}
+    </h1>
+    <p class="text-gray-600 mb-8">
+        {% if payment.is_paid %}Your order has been confirmed. Thank you for your purchase!
+        {% elif payment.is_pending %}Your payment is being processed. We'll update you shortly.
+        {% else %}We've received your payment information.{% endif %}
+    </p>
+    <div class="flex flex-col sm:flex-row justify-center gap-3">
+        <a href="{% url 'payment-status' order.pk %}"
+           class="bg-primary text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-medium transition-colors">
+            View Payment Status
+        </a>
+        <a href="{% url 'order-detail' order.pk %}"
+           class="bg-white border text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-50 font-medium transition-colors">
+            View Order Details
+        </a>
+    </div>
+    {% else %}
+    <div class="text-6xl mb-6">✅</div>
+    <h1 class="text-3xl font-bold mb-4">Payment Complete</h1>
+    <p class="text-gray-600 mb-8">Thank you for your payment.</p>
+    <a href="{% url 'orders' %}" class="bg-primary text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-medium transition-colors">
+        View My Orders
+    </a>
+    {% endif %}
+</div>
+
+<script>
+{% if order and payment.is_pending %}
+// Auto-check status for pending payments
+let checkCount = 0;
+const maxChecks = 12;
+const interval = setInterval(() => {
+    checkCount++;
+    if (checkCount >= maxChecks) { clearInterval(interval); return; }
+    fetch('{% url "check-payment" order.pk %}')
+        .then(r => r.json())
+        .then(data => {
+            if (data.is_paid || data.is_failed) {
+                clearInterval(interval);
+                location.reload();
+            }
+        })
+        .catch(() => {});
+}, 5000);
+{% endif %}
+</script>
+{% endblock %}

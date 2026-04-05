@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Cart - Midtrans Shop{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-8">Shopping Cart</h1>
+
+    {% if cart_items %}
+    <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-50 border-b">
+                <tr>
+                    <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">Product</th>
+                    <th class="text-center px-6 py-3 text-sm font-medium text-gray-500">Price</th>
+                    <th class="text-center px-6 py-3 text-sm font-medium text-gray-500">Quantity</th>
+                    <th class="text-right px-6 py-3 text-sm font-medium text-gray-500">Subtotal</th>
+                    <th class="px-6 py-3 w-10"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y">
+                {% for item in cart_items %}
+                <tr>
+                    <td class="px-6 py-4 font-medium text-gray-900">{{ item.product.name }}</td>
+                    <td class="px-6 py-4 text-center text-gray-600">Rp {{ item.product.price|floatformat:0 }}</td>
+                    <td class="px-6 py-4 text-center">
+                        <div class="inline-flex items-center border rounded-lg">
+                            <button onclick="updateQty({{ item.product.pk }}, {{ item.quantity|add:'-1' }})"
+                                    class="px-3 py-1 text-gray-600 hover:bg-gray-100 transition-colors">&minus;</button>
+                            <span class="px-3 py-1 border-x font-medium min-w-[2.5rem] text-center">{{ item.quantity }}</span>
+                            <button onclick="updateQty({{ item.product.pk }}, {{ item.quantity|add:'1' }})"
+                                    class="px-3 py-1 text-gray-600 hover:bg-gray-100 transition-colors">+</button>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-right font-medium">Rp {{ item.subtotal|floatformat:0 }}</td>
+                    <td class="px-6 py-4 text-right">
+                        <form method="post" action="{% url 'remove-from-cart' item.product.pk %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="text-red-400 hover:text-red-600 transition-colors" title="Remove">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="bg-gray-50 border-t">
+                <tr>
+                    <td colspan="3" class="px-6 py-4 text-right font-bold text-lg">Total</td>
+                    <td class="px-6 py-4 text-right font-bold text-lg text-primary">Rp {{ cart_total|floatformat:0 }}</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div class="flex justify-between mt-6">
+        <a href="{% url 'home' %}" class="text-primary hover:underline font-medium">&larr; Continue Shopping</a>
+        <a href="{% url 'checkout' %}" class="bg-primary text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-medium transition-colors">
+            Proceed to Checkout
+        </a>
+    </div>
+
+    {% else %}
+    <div class="text-center py-16">
+        <div class="text-6xl mb-4">🛒</div>
+        <p class="text-gray-500 text-lg mb-6">Your cart is empty</p>
+        <a href="{% url 'home' %}" class="bg-primary text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-medium transition-colors">
+            Browse Products
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function updateQty(productId, qty) {
+    if (qty < 1) qty = 0;
+    fetch("{% url 'update-cart' %}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCookie("csrftoken"),
+        },
+        body: JSON.stringify({ product_id: productId, quantity: qty })
+    }).then(() => location.reload());
+}
+</script>
+{% endblock %}

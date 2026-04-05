@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+
+{% block title %}Payment Status - Midtrans Shop{% endblock %}
+
+{% block extra_head %}
+{% if payment.is_pending and payment.payment_type == "credit_card" and payment.redirect_url %}
+<script
+    id="midtrans-script"
+    src="https://api.{% if is_production %}midtrans.com{% else %}sandbox.midtrans.com{% endif %}/v2/assets/js/midtrans-new-3ds.min.js"
+    data-environment="{% if is_production %}production{% else %}sandbox{% endif %}"
+    data-client-key="{{ client_key }}"
+    type="text/javascript">
+</script>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 py-8">
+
+    <!-- Status Banner -->
+    <div id="status-banner" class="rounded-xl p-8 mb-8 text-center
+        {% if payment.is_paid %}bg-green-50 border-2 border-green-200
+        {% elif payment.is_pending %}bg-yellow-50 border-2 border-yellow-200
+        {% elif payment.is_failed %}bg-red-50 border-2 border-red-200
+        {% else %}bg-gray-50 border-2 border-gray-200{% endif %}">
+
+        <div class="text-5xl mb-3" id="status-icon">
+            {% if payment.is_paid %}✅{% elif payment.is_pending %}⏳{% elif payment.is_failed %}❌{% else %}ℹ️{% endif %}
+        </div>
+        <h1 class="text-2xl font-bold mb-1" id="status-title">
+            {% if payment.is_paid %}Payment Successful!
+            {% elif payment.is_pending %}Waiting for Payment
+            {% elif payment.is_failed %}Payment {{ payment.get_transaction_status_display }}
+            {% else %}Payment Status{% endif %}
+        </h1>
+        <p class="text-gray-600 text-sm" id="status-subtitle">
+            {% if payment.is_pending %}Complete your payment using the instructions below
+            {% elif payment.is_paid %}Your order has been confirmed
+            {% endif %}
+        </p>
+    </div>
+
+    <!-- Payment Info -->
+    <div class="bg-white rounded-xl shadow-sm border p-6 mb-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="font-bold text-lg">Payment Details</h2>
+            <span class="text-xs text-gray-400 font-mono">{{ payment.order_id }}</span>
+        </div>
+        <div class="grid grid-cols-2 gap-4 text-sm">
+            <div>
+                <span class="text-gray-500 block">Amount</span>
+                <div class="font-bold text-xl text-primary mt-1">Rp {{ payment.gross_amount|floatformat:0 }}</div>
+            </div>
+            <div>
+                <span class="text-gray-500 block">Method</span>
+                <div class="font-medium mt-1">{{ payment.get_payment_type_display }}{% if payment.bank %} ({{ payment.bank|upper }}){% endif %}</div>
+            </div>
+            {% if payment.expiry_time and payment.is_pending %}
+            <div class="col-span-2">
+                <span class="text-gray-500 block">Expires at</span>
+                <div class="font-medium text-orange-600 mt-1" id="expiry-display">{{ payment.expiry_time|date:"d M Y, H:i" }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Payment Instructions -->
+    {% if payment.is_pending %}
+    <div class="bg-white rounded-xl shadow-sm border p-6 mb-6">
+        <h2 class="font-bold text-lg mb-4">Payment Instructions</h2>
+
+        {% if payment.va_number %}
+        <!-- Virtual Account -->
+        <div class="text-center">
+            <p class="text-gray-500 mb-3">Transfer to <strong>{{ payment.bank|upper }}</strong> Virtual Account</p>
+            <div class="bg-gray-50 rounded-xl p-5 inline-block">
+                <div class="text-3xl font-mono font-bold tracking-widest text-gray-900" id="va-number">{{ payment.va_number }}</div>
+            </div>
+            <button onclick="copyText('{{ payment.va_number }}')"
+                    class="flex items-center justify-center mx-auto mt-3 text-primary hover:underline text-sm font-medium gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                Copy VA Number
+            </button>
+            <div class="mt-4 bg-blue-50 rounded-lg p-3 text-xs text-blue-700 text-left">
+                <strong>How to pay:</strong><br>
+                1. Open your {{ payment.bank|upper }} mobile/internet banking<br>
+                2. Select Transfer → Virtual Account<br>
+                3. Enter the VA number above<br>
+                4. Confirm the amount and complete payment
+            </div>
+        </div>
+
+        {% elif payment.bill_key %}
+        <!-- Mandiri Bill Payment -->
+        <div class="text-center space-y-4">
+            <div>
+                <p class="text-gray-500 mb-2">Biller Code</p>
+                <div class="bg-gray-50 rounded-xl p-4 inline-block">
+                    <span class="text-2xl font-mono font-bold tracking-wider">{{ payment.biller_code }}</span>
+                </div>
+                <button onclick="copyText('{{ payment.biller_code }}')" class="block mx-auto mt-2 text-primary hover:underline text-sm">Copy</button>
+            </div>
+            <div>
+                <p class="text-gray-500 mb-2">Bill Key</p>
+                <div class="bg-gray-50 rounded-xl p-4 inline-block">
+                    <span class="text-2xl font-mono font-bold tracking-wider">{{ payment.bill_key }}</span>
+                </div>
+                <button onclick="copyText('{{ payment.bill_key }}')" class="block mx-auto mt-2 text-primary hover:underline text-sm">Copy</button>
+            </div>
+            <div class="bg-blue-50 rounded-lg p-3 text-xs text-blue-700 text-left">
+                <strong>How to pay:</strong><br>
+                1. Open Mandiri Livin' or ATM<br>
+                2. Select Pay → Multi Payment<br>
+                3. Input Biller Code and Bill Key<br>
+                4. Confirm and complete payment
+            </div>
+        </div>
+
+        {% elif payment.qr_string %}
+        <!-- QR Code (QRIS / GoPay) -->
+        <div class="text-center">
+            <p class="text-gray-500 mb-4">Scan this QR code with your e-wallet app</p>
+            <div class="inline-block bg-white p-4 rounded-xl border-2 shadow-sm">
+                <img src="{{ payment.qr_string }}" alt="QR Code" class="w-64 h-64 mx-auto" onerror="this.parentElement.innerHTML='<div class=\'w-64 h-64 flex items-center justify-center bg-gray-100 rounded-lg text-gray-400\'>QR Code unavailable</div>'">
+            </div>
+            {% if payment.deeplink_url %}
+            <div class="mt-4">
+                <a href="{{ payment.deeplink_url }}" class="inline-flex items-center gap-2 bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 font-medium transition-colors shadow-sm" target="_blank">
+                    💚 Open GoPay App
+                </a>
+            </div>
+            {% endif %}
+
+            {% if not is_production %}
+            <!-- Sandbox Simulator Helper -->
+            <div class="mt-6 bg-amber-50 border border-amber-200 rounded-lg p-4 text-left">
+                <div class="font-bold text-amber-800 text-sm mb-2">🧪 Sandbox Simulator</div>
+
+                {% if payment.payment_type == "gopay" and payment.deeplink_url %}
+                <p class="text-xs text-amber-700 mb-2">
+                    Use the <a href="{{ payment.deeplink_url }}" target="_blank" class="underline font-medium">GoPay Deeplink Simulator</a> to simulate payment.
+                    Or use the <a href="https://simulator.sandbox.midtrans.com/qris/index" target="_blank" class="underline font-medium">QRIS Simulator</a> with the raw QR string below:
+                </p>
+                {% else %}
+                <p class="text-xs text-amber-700 mb-2">
+                    Use the <a href="https://simulator.sandbox.midtrans.com/qris/index" target="_blank" class="underline font-medium">QRIS Simulator</a>.
+                    Paste the <strong>raw QR string</strong> below (non-openAPI mode):
+                </p>
+                {% endif %}
+
+                {% if payment.charge_response.qr_string %}
+                <div class="bg-white rounded-lg p-2 border border-amber-200 mb-2">
+                    <textarea id="raw-qr-string" readonly rows="3"
+                        class="w-full text-xs font-mono text-gray-600 resize-none border-0 bg-transparent focus:outline-none">{{ payment.charge_response.qr_string }}</textarea>
+                </div>
+                <button onclick="copyText(document.getElementById('raw-qr-string').value)"
+                        class="text-primary hover:underline text-xs font-medium">
+                    📋 Copy Raw QR String
+                </button>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        {% elif payment.payment_code %}
+        <!-- Convenience Store -->
+        <div class="text-center">
+            <p class="text-gray-500 mb-3">Show this payment code at the counter</p>
+            <div class="bg-gray-50 rounded-xl p-5 inline-block">
+                <span class="text-3xl font-mono font-bold tracking-widest">{{ payment.payment_code }}</span>
+            </div>
+            <button onclick="copyText('{{ payment.payment_code }}')"
+                    class="flex items-center justify-center mx-auto mt-3 text-primary hover:underline text-sm font-medium gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                Copy Payment Code
+            </button>
+            {% if payment.charge_response.merchant_id %}
+            <div class="mt-4 space-y-2">
+                <div>
+                    <span class="text-gray-500 text-sm">Merchant ID</span>
+                    <div class="bg-gray-50 rounded-lg p-3 inline-block ml-2">
+                        <span class="text-lg font-mono font-bold">{{ payment.charge_response.merchant_id }}</span>
+                    </div>
+                    <button onclick="copyText('{{ payment.charge_response.merchant_id }}')"
+                            class="ml-1 text-primary hover:underline text-sm">Copy</button>
+                </div>
+            </div>
+            {% endif %}
+            <div class="mt-4 bg-blue-50 rounded-lg p-3 text-xs text-blue-700 text-left">
+                <strong>How to pay:</strong><br>
+                1. Go to the nearest {{ payment.charge_response.store|default:"convenience store" | title }}<br>
+                2. Tell the cashier you want to make a payment<br>
+                3. Give the <strong>Payment Code</strong>{% if payment.charge_response.merchant_id %} and <strong>Merchant ID</strong>{% endif %}<br>
+                4. Confirm the amount and complete payment
+            </div>
+        </div>
+
+        {% elif payment.redirect_url and payment.payment_type == "credit_card" %}
+        <!-- Credit Card 3DS Authentication -->
+        <div class="text-center py-4" id="cc-3ds-section">
+            <div class="text-4xl mb-3">🔐</div>
+            <p class="text-gray-700 font-medium mb-2">3D Secure Authentication Required</p>
+            <p class="text-gray-500 text-sm mb-4">Complete the bank verification to process your credit card payment</p>
+            <button onclick="start3DS()" id="auth-3ds-btn"
+                    class="inline-block bg-primary text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-medium transition-colors shadow-sm">
+                🔒 Authenticate Payment
+            </button>
+            <div id="cc-3ds-error" class="hidden mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm"></div>
+            <div id="cc-3ds-loading" class="hidden mt-4 text-gray-500 text-sm">
+                <svg class="animate-spin h-5 w-5 inline mr-2" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Verifying with your bank...
+            </div>
+        </div>
+
+        {% elif payment.redirect_url %}
+        <!-- Redirect-based payment (ShopeePay, DANA, etc.) -->
+        <div class="text-center py-4">
+            <p class="text-gray-500 mb-4">Complete your payment on the provider's page</p>
+            <a href="{{ payment.redirect_url }}" target="_blank"
+               class="inline-block bg-primary text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-medium transition-colors shadow-sm">
+                Complete Payment →
+            </a>
+        </div>
+
+        {% else %}
+        <p class="text-center text-gray-500 py-4">Waiting for payment confirmation...</p>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Actions -->
+    <div class="flex justify-between items-center">
+        <a href="{% url 'orders' %}" class="text-primary hover:underline font-medium">&larr; My Orders</a>
+        <div class="flex items-center gap-3">
+            {% if payment.is_pending %}
+            <span id="poll-indicator" class="text-xs text-gray-400">Auto-checking...</span>
+            <button onclick="checkStatus()" id="check-btn"
+                    class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
+                🔄 Check Status
+            </button>
+            {% elif payment.is_paid %}
+            <a href="{% url 'order-detail' order.pk %}" class="bg-primary text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 font-medium transition-colors">
+                View Invoice →
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+let polling = null;
+
+function open3dsModal(url) {
+    let overlay = document.getElementById('threeds-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'threeds-overlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        const box = document.createElement('div');
+        box.style.cssText = 'background:white;border-radius:12px;width:460px;max-width:95vw;max-height:90vh;overflow:hidden;box-shadow:0 25px 50px rgba(0,0,0,0.25);';
+        box.innerHTML = '<div style="padding:12px 16px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">'
+            + '<span style="font-weight:600;font-size:14px;">🔐 Bank Verification</span>'
+            + '<button onclick="close3dsModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280;">&times;</button></div>'
+            + '<iframe id="threeds-iframe" style="width:100%;height:500px;border:none;"></iframe>';
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+    }
+    overlay.style.display = 'flex';
+    document.getElementById('threeds-iframe').src = url;
+}
+
+function close3dsModal() {
+    const overlay = document.getElementById('threeds-overlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+        document.getElementById('threeds-iframe').src = '';
+    }
+}
+
+function copyText(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = event.target.closest('button');
+        const orig = btn.innerHTML;
+        btn.innerHTML = '✅ Copied!';
+        setTimeout(() => btn.innerHTML = orig, 1500);
+    });
+}
+
+function checkStatus() {
+    const btn = document.getElementById('check-btn');
+    if (btn) { btn.textContent = '⏳ Checking...'; btn.disabled = true; }
+
+    fetch('{% url "check-payment" order.pk %}')
+        .then(r => r.json())
+        .then(data => {
+            if (btn) { btn.textContent = '🔄 Check Status'; btn.disabled = false; }
+            if (data.is_paid || data.is_failed) {
+                stopPolling();
+                location.reload();
+            }
+        })
+        .catch(() => {
+            if (btn) { btn.textContent = '🔄 Check Status'; btn.disabled = false; }
+        });
+}
+
+function startPolling() {
+    polling = setInterval(checkStatus, 5000);
+}
+
+function stopPolling() {
+    if (polling) { clearInterval(polling); polling = null; }
+}
+
+{% if payment.is_pending %}
+startPolling();
+{% endif %}
+
+{% if payment.is_pending and payment.payment_type == "credit_card" and payment.redirect_url %}
+function start3DS() {
+    const btn = document.getElementById('auth-3ds-btn');
+    const errEl = document.getElementById('cc-3ds-error');
+    const loadEl = document.getElementById('cc-3ds-loading');
+    btn.classList.add('hidden');
+    errEl.classList.add('hidden');
+    loadEl.classList.remove('hidden');
+
+    MidtransNew3ds.authenticate('{{ payment.redirect_url }}', {
+        performAuthentication: function(redirect_url) {
+            open3dsModal(redirect_url);
+        },
+        onSuccess: function(response) {
+            close3dsModal();
+            loadEl.innerHTML = '✅ Payment verified! Updating...';
+            stopPolling();
+            setTimeout(function() { location.reload(); }, 1500);
+        },
+        onFailure: function(response) {
+            close3dsModal();
+            loadEl.classList.add('hidden');
+            btn.classList.remove('hidden');
+            errEl.textContent = '3DS authentication failed: ' + (response.status_message || 'Please try again');
+            errEl.classList.remove('hidden');
+        },
+        onPending: function(response) {
+            close3dsModal();
+            loadEl.innerHTML = '⏳ Verification pending, checking status...';
+            setTimeout(function() { location.reload(); }, 2000);
+        }
+    });
+}
+
+// Auto-trigger 3DS on page load
+start3DS();
+{% endif %}
+</script>
+{% endblock %}

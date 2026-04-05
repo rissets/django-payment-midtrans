@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Products - Midtrans Shop{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Hero -->
+    <div class="text-center mb-10">
+        <h1 class="text-4xl font-bold text-gray-900 mb-3">Midtrans Payment Demo</h1>
+        <p class="text-gray-500 text-lg">Browse products and test all payment methods — Credit Card, Bank Transfer, E-Wallet, QRIS & more</p>
+    </div>
+
+    <!-- Products Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {% for product in products %}
+        <div class="bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition-shadow">
+            <div class="h-48 bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+                <span class="text-6xl">🛍️</span>
+            </div>
+            <div class="p-5">
+                <h3 class="font-semibold text-gray-900 text-lg">{{ product.name }}</h3>
+                {% if product.description %}
+                <p class="text-gray-500 text-sm mt-1 line-clamp-2">{{ product.description }}</p>
+                {% endif %}
+                <div class="mt-3 flex items-center justify-between">
+                    <span class="text-xl font-bold text-primary">Rp {{ product.price|floatformat:0 }}</span>
+                    <span class="text-sm text-gray-400">Stock: {{ product.stock }}</span>
+                </div>
+                {% if product.stock > 0 %}
+                <form method="post" action="{% url 'add-to-cart' product.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="w-full mt-4 bg-primary text-white py-2.5 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                        Add to Cart
+                    </button>
+                </form>
+                {% else %}
+                <button disabled class="w-full mt-4 bg-gray-200 text-gray-500 py-2.5 px-4 rounded-lg cursor-not-allowed">
+                    Out of Stock
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full text-center py-16">
+            <div class="text-6xl mb-4">📦</div>
+            <p class="text-gray-500 text-lg mb-4">No products yet</p>
+            <a href="/admin/shop/product/add/" class="text-primary hover:underline font-medium">Add products in admin →</a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Info Box -->
+    <div class="mt-12 bg-blue-50 border border-blue-200 rounded-xl p-6 text-sm text-blue-800">
+        <h3 class="font-bold text-base mb-2">📋 Sandbox Testing Info</h3>
+        <ul class="space-y-1 list-disc list-inside">
+            <li>This demo uses Midtrans <strong>Core API</strong> (not Snap)</li>
+            <li>All transactions are in <strong>sandbox mode</strong> — no real charges</li>
+            <li>Notification webhook: <code class="bg-blue-100 px-1 rounded">POST /midtrans/api/notification/</code></li>
+            <li>Use <a href="/admin/" class="underline font-medium">Django Admin</a> to manage products, orders, and view payment details</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

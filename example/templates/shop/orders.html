@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}My Orders - Midtrans Shop{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-8">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-3xl font-bold text-gray-900">My Orders</h1>
+        <a href="{% url 'home' %}" class="text-primary hover:underline text-sm font-medium">Continue Shopping →</a>
+    </div>
+
+    <!-- Status Filter -->
+    <div class="flex gap-2 mb-6 flex-wrap">
+        <a href="{% url 'orders' %}"
+           class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if not request.GET.status %}bg-primary text-white{% else %}bg-white border text-gray-600 hover:bg-gray-50{% endif %}">
+            All
+        </a>
+        <a href="{% url 'orders' %}?status=pending"
+           class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if request.GET.status == 'pending' %}bg-yellow-500 text-white{% else %}bg-white border text-gray-600 hover:bg-gray-50{% endif %}">
+            ⏳ Pending
+        </a>
+        <a href="{% url 'orders' %}?status=paid"
+           class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if request.GET.status == 'paid' %}bg-green-500 text-white{% else %}bg-white border text-gray-600 hover:bg-gray-50{% endif %}">
+            ✅ Paid
+        </a>
+        <a href="{% url 'orders' %}?status=cancelled"
+           class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if request.GET.status == 'cancelled' %}bg-red-500 text-white{% else %}bg-white border text-gray-600 hover:bg-gray-50{% endif %}">
+            ❌ Cancelled
+        </a>
+        <a href="{% url 'orders' %}?status=refunded"
+           class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if request.GET.status == 'refunded' %}bg-blue-500 text-white{% else %}bg-white border text-gray-600 hover:bg-gray-50{% endif %}">
+            ↩️ Refunded
+        </a>
+    </div>
+
+    {% if orders %}
+    <div class="space-y-4">
+        {% for order in orders %}
+        <div class="bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition-shadow">
+            <div class="p-5">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="font-mono text-sm text-gray-500">{{ order.id|truncatechars:13 }}</span>
+                            <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold
+                                {% if order.status == 'paid' %}bg-green-100 text-green-700
+                                {% elif order.status == 'pending' %}bg-yellow-100 text-yellow-700
+                                {% elif order.status == 'cancelled' %}bg-red-100 text-red-700
+                                {% elif order.status == 'refunded' %}bg-blue-100 text-blue-700
+                                {% elif order.status == 'shipped' %}bg-purple-100 text-purple-700
+                                {% endif %}">
+                                {{ order.get_status_display }}
+                            </span>
+                        </div>
+                        <div class="text-sm text-gray-600">
+                            {% for item in order.items.all %}
+                                {{ item.product.name }} &times;{{ item.quantity }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        </div>
+                        <div class="text-xs text-gray-400 mt-1">{{ order.created_at|date:"d M Y, H:i" }}</div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="text-right">
+                            <div class="font-bold text-lg">Rp {{ order.total|floatformat:0 }}</div>
+                            {% if order.midtrans_payment %}
+                            <div class="text-xs text-gray-500">{{ order.midtrans_payment.get_payment_type_display }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <a href="{% url 'order-detail' order.pk %}"
+                               class="text-primary hover:underline text-sm font-medium whitespace-nowrap">View Details</a>
+                            {% if order.status == 'pending' and order.midtrans_payment %}
+                            <a href="{% url 'payment-status' order.pk %}"
+                               class="text-orange-600 hover:underline text-sm font-medium whitespace-nowrap">Pay Now</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="flex justify-center mt-8 gap-2">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}"
+           class="px-4 py-2 bg-white border rounded-lg hover:bg-gray-50 text-sm font-medium">&larr; Previous</a>
+        {% endif %}
+        <span class="px-4 py-2 text-gray-500 text-sm">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}"
+           class="px-4 py-2 bg-white border rounded-lg hover:bg-gray-50 text-sm font-medium">Next &rarr;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="text-center py-16">
+        <div class="text-6xl mb-4">📦</div>
+        <p class="text-gray-500 text-lg mb-6">No orders yet</p>
+        <a href="{% url 'home' %}" class="bg-primary text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-medium transition-colors">
+            Start Shopping
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

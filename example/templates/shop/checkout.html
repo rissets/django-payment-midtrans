@@ -1,0 +1,479 @@
+{% extends "base.html" %}
+
+{% block title %}Checkout - Midtrans Shop{% endblock %}
+
+{% block extra_head %}
+<script
+    id="midtrans-script"
+    src="https://api.{% if is_production %}midtrans.com{% else %}sandbox.midtrans.com{% endif %}/v2/assets/js/midtrans-new-3ds.min.js"
+    data-environment="{% if is_production %}production{% else %}sandbox{% endif %}"
+    data-client-key="{{ client_key }}"
+    type="text/javascript">
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Order Summary (sidebar) -->
+        <div class="lg:col-span-1 order-2 lg:order-1">
+            <div class="bg-white rounded-xl shadow-sm border p-6 sticky top-20">
+                <h2 class="font-bold text-lg mb-4">Order Summary</h2>
+                {% for item in cart_items %}
+                <div class="flex justify-between py-2 {% if not forloop.last %}border-b{% endif %}">
+                    <div>
+                        <div class="font-medium text-sm">{{ item.product.name }}</div>
+                        <div class="text-xs text-gray-500">x{{ item.quantity }}</div>
+                    </div>
+                    <div class="font-medium text-sm">Rp {{ item.subtotal|floatformat:0 }}</div>
+                </div>
+                {% endfor %}
+                <div class="flex justify-between py-3 mt-2 border-t font-bold text-lg">
+                    <span>Total</span>
+                    <span class="text-primary">Rp {{ cart_total|floatformat:0 }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Form -->
+        <div class="lg:col-span-2 order-1 lg:order-2">
+            <!-- Customer Details -->
+            <div class="bg-white rounded-xl shadow-sm border p-6 mb-6">
+                <h2 class="font-bold text-lg mb-4">Customer Details</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                        <input type="text" id="first_name" value="{{ user.first_name|default:user.username }}"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                        <input type="text" id="last_name" value="{{ user.last_name }}"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="email" value="{{ user.email|default_if_none:'' }}"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                        <input type="text" id="phone" value="08123456789"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Method -->
+            <div class="bg-white rounded-xl shadow-sm border p-6">
+                <h2 class="font-bold text-lg mb-4">Payment Method</h2>
+
+                <!-- Tabs -->
+                <div class="flex flex-wrap gap-2 mb-6" id="payment-tabs">
+                    <button onclick="switchTab('cc')" id="tab-cc" class="tab-btn active-tab px-4 py-2 rounded-lg border text-sm font-medium transition-all">
+                        💳 Credit Card
+                    </button>
+                    <button onclick="switchTab('va')" id="tab-va" class="tab-btn px-4 py-2 rounded-lg border text-sm font-medium transition-all">
+                        🏦 Bank Transfer
+                    </button>
+                    <button onclick="switchTab('ewallet')" id="tab-ewallet" class="tab-btn px-4 py-2 rounded-lg border text-sm font-medium transition-all">
+                        📱 E-Wallet
+                    </button>
+                    <button onclick="switchTab('qris')" id="tab-qris" class="tab-btn px-4 py-2 rounded-lg border text-sm font-medium transition-all">
+                        📷 QRIS
+                    </button>
+                    <button onclick="switchTab('cstore')" id="tab-cstore" class="tab-btn px-4 py-2 rounded-lg border text-sm font-medium transition-all">
+                        🏪 Convenience Store
+                    </button>
+                    <button onclick="switchTab('paylater')" id="tab-paylater" class="tab-btn px-4 py-2 rounded-lg border text-sm font-medium transition-all">
+                        🕐 Pay Later
+                    </button>
+                </div>
+
+                <!-- Credit Card Panel -->
+                <div id="panel-cc" class="tab-panel">
+                    <div class="space-y-4 max-w-md">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Card Number</label>
+                            <input type="text" id="card_number" placeholder="4811 1111 1111 1114" maxlength="19"
+                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none font-mono text-lg tracking-wider">
+                        </div>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Month</label>
+                                <input type="text" id="card_exp_month" placeholder="12" maxlength="2"
+                                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none text-center">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Year</label>
+                                <input type="text" id="card_exp_year" placeholder="2030" maxlength="4"
+                                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none text-center">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">CVV</label>
+                                <input type="password" id="card_cvv" placeholder="•••" maxlength="4"
+                                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none text-center">
+                            </div>
+                        </div>
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700">
+                            <strong>Sandbox Test Cards:</strong><br>
+                            Visa (no 3DS): 4811 1111 1111 1114<br>
+                            Visa (3DS): 4511 1111 1111 1117<br>
+                            Mastercard: 5211 1111 1111 1117<br>
+                            CVV: any 3 digits &bull; Exp: any future date &bull; 3DS OTP: 112233
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bank Transfer Panel -->
+                <div id="panel-va" class="tab-panel hidden">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <label class="bank-opt border-2 rounded-xl p-4 cursor-pointer hover:border-primary transition-all text-center">
+                            <input type="radio" name="bank" value="bca" class="hidden" checked>
+                            <div class="text-2xl mb-1">🏦</div>
+                            <div class="font-bold">BCA</div>
+                            <div class="text-xs text-gray-500">Virtual Account</div>
+                        </label>
+                        <label class="bank-opt border-2 rounded-xl p-4 cursor-pointer hover:border-primary transition-all text-center">
+                            <input type="radio" name="bank" value="bni" class="hidden">
+                            <div class="text-2xl mb-1">🏦</div>
+                            <div class="font-bold">BNI</div>
+                            <div class="text-xs text-gray-500">Virtual Account</div>
+                        </label>
+                        <label class="bank-opt border-2 rounded-xl p-4 cursor-pointer hover:border-primary transition-all text-center">
+                            <input type="radio" name="bank" value="bri" class="hidden">
+                            <div class="text-2xl mb-1">🏦</div>
+                            <div class="font-bold">BRI</div>
+                            <div class="text-xs text-gray-500">Virtual Account</div>
+                        </label>
+                        <label class="bank-opt border-2 rounded-xl p-4 cursor-pointer hover:border-primary transition-all text-center">
+                            <input type="radio" name="bank" value="permata" class="hidden">
+                            <div class="text-2xl mb-1">🏦</div>
+                            <div class="font-bold">Permata</div>
+                            <div class="text-xs text-gray-500">Virtual Account</div>
+                        </label>
+                        <label class="bank-opt border-2 rounded-xl p-4 cursor-pointer hover:border-primary transition-all text-center">
+                            <input type="radio" name="bank" value="cimb" class="hidden">
+                            <div class="text-2xl mb-1">🏦</div>
+                            <div class="font-bold">CIMB</div>
+                            <div class="text-xs text-gray-500">Virtual Account</div>
+                        </label>
+                        <label class="bank-opt border-2 rounded-xl p-4 cursor-pointer hover:border-primary transition-all text-center" onclick="selectMandiri()">
+                            <input type="radio" name="bank" value="mandiri" class="hidden">
+                            <div class="text-2xl mb-1">🏦</div>
+                            <div class="font-bold">Mandiri</div>
+                            <div class="text-xs text-gray-500">Bill Payment</div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- E-Wallet Panel -->
+                <div id="panel-ewallet" class="tab-panel hidden">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <label class="ewallet-opt border-2 rounded-xl p-4 cursor-pointer hover:border-primary transition-all text-center">
+                            <input type="radio" name="ewallet" value="gopay" class="hidden" checked>
+                            <div class="text-3xl mb-2">💚</div>
+                            <div class="font-bold">GoPay</div>
+                            <div class="text-xs text-gray-500">QR / Deeplink</div>
+                        </label>
+                        <label class="ewallet-opt border-2 rounded-xl p-4 cursor-pointer hover:border-primary transition-all text-center">
+                            <input type="radio" name="ewallet" value="shopeepay" class="hidden">
+                            <div class="text-3xl mb-2">🧡</div>
+                            <div class="font-bold">ShopeePay</div>
+                            <div class="text-xs text-gray-500">Redirect</div>
+                        </label>
+                        <label class="ewallet-opt border-2 rounded-xl p-4 cursor-pointer hover:border-primary transition-all text-center">
+                            <input type="radio" name="ewallet" value="dana" class="hidden">
+                            <div class="text-3xl mb-2">💙</div>
+                            <div class="font-bold">DANA</div>
+                            <div class="text-xs text-gray-500">Redirect</div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- QRIS Panel -->
+                <div id="panel-qris" class="tab-panel hidden">
+                    <div class="text-center py-6">
+                        <div class="text-6xl mb-4">📱</div>
+                        <p class="text-gray-700 font-medium">Pay with QRIS</p>
+                        <p class="text-sm text-gray-500 mt-2">Scan QR code with any QRIS-compatible app<br>(GoPay, DANA, OVO, ShopeePay, LinkAja, etc.)</p>
+                    </div>
+                </div>
+
+                <!-- Convenience Store Panel -->
+                <div id="panel-cstore" class="tab-panel hidden">
+                    <div class="grid grid-cols-2 gap-3 max-w-sm">
+                        <label class="cstore-opt border-2 rounded-xl p-4 cursor-pointer hover:border-primary transition-all text-center">
+                            <input type="radio" name="cstore" value="indomaret" class="hidden" checked>
+                            <div class="text-3xl mb-2">🏪</div>
+                            <div class="font-bold">Indomaret</div>
+                        </label>
+                        <label class="cstore-opt border-2 rounded-xl p-4 cursor-pointer hover:border-primary transition-all text-center">
+                            <input type="radio" name="cstore" value="alfamart" class="hidden">
+                            <div class="text-3xl mb-2">🏪</div>
+                            <div class="font-bold">Alfamart</div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Pay Later Panel -->
+                <div id="panel-paylater" class="tab-panel hidden">
+                    <div class="grid grid-cols-2 gap-3 max-w-sm">
+                        <label class="paylater-opt border-2 rounded-xl p-4 cursor-pointer hover:border-primary transition-all text-center">
+                            <input type="radio" name="paylater" value="akulaku" class="hidden" checked>
+                            <div class="text-3xl mb-2">🛒</div>
+                            <div class="font-bold">Akulaku</div>
+                            <div class="text-xs text-gray-500">Installment</div>
+                        </label>
+                    </div>
+                    <div class="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
+                        <strong>Note:</strong> Pay Later methods must be activated on your Midtrans account.
+                    </div>
+                </div>
+
+                <!-- Error Display -->
+                <div id="error-msg" class="hidden mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm"></div>
+
+                <!-- Pay Button -->
+                <button onclick="processPayment()" id="pay-btn"
+                        class="mt-6 w-full bg-primary text-white py-3.5 px-6 rounded-lg hover:bg-blue-700 font-bold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow">
+                    Pay Rp {{ cart_total|floatformat:0 }}
+                </button>
+
+                <div id="loading" class="hidden mt-4 text-center">
+                    <div class="inline-flex items-center space-x-2 text-gray-600">
+                        <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Processing payment...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .active-tab { background: #2563EB; color: white; border-color: #2563EB; }
+    .tab-btn:not(.active-tab) { background: white; color: #374151; }
+    .tab-btn:not(.active-tab):hover { background: #f9fafb; }
+    .bank-opt:has(input:checked), .ewallet-opt:has(input:checked),
+    .cstore-opt:has(input:checked), .paylater-opt:has(input:checked) {
+        border-color: #2563EB; background: #eff6ff;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentTab = 'cc';
+let isMandiri = false;
+
+function switchTab(tab) {
+    currentTab = tab;
+    isMandiri = false;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
+    document.getElementById('tab-' + tab).classList.add('active-tab');
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+    document.getElementById('panel-' + tab).classList.remove('hidden');
+    hideError();
+}
+
+function selectMandiri() { isMandiri = true; }
+
+function showError(msg) {
+    const el = document.getElementById('error-msg');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function hideError() {
+    document.getElementById('error-msg').classList.add('hidden');
+}
+
+function setLoading(loading) {
+    document.getElementById('pay-btn').disabled = loading;
+    document.getElementById('loading').classList.toggle('hidden', !loading);
+}
+
+function open3dsModal(url) {
+    let overlay = document.getElementById('threeds-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'threeds-overlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        const box = document.createElement('div');
+        box.style.cssText = 'background:white;border-radius:12px;width:460px;max-width:95vw;max-height:90vh;overflow:hidden;box-shadow:0 25px 50px rgba(0,0,0,0.25);';
+        box.innerHTML = '<div style="padding:12px 16px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">'
+            + '<span style="font-weight:600;font-size:14px;">🔐 Bank Verification</span>'
+            + '<button onclick="close3dsModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280;">&times;</button></div>'
+            + '<iframe id="threeds-iframe" style="width:100%;height:500px;border:none;"></iframe>';
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+    }
+    overlay.style.display = 'flex';
+    document.getElementById('threeds-iframe').src = url;
+}
+
+function close3dsModal() {
+    const overlay = document.getElementById('threeds-overlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+        document.getElementById('threeds-iframe').src = '';
+    }
+}
+
+function buildPayload() {
+    const base = {
+        first_name: document.getElementById('first_name').value,
+        last_name: document.getElementById('last_name').value,
+        email: document.getElementById('email').value,
+        phone: document.getElementById('phone').value,
+    };
+
+    if (currentTab === 'cc') {
+        return {...base, payment_type: 'credit_card'};
+    } else if (currentTab === 'va') {
+        const bank = document.querySelector('input[name="bank"]:checked').value;
+        if (bank === 'mandiri') {
+            return {...base, payment_type: 'echannel'};
+        }
+        return {...base, payment_type: 'bank_transfer', bank: bank};
+    } else if (currentTab === 'ewallet') {
+        return {...base, payment_type: document.querySelector('input[name="ewallet"]:checked').value};
+    } else if (currentTab === 'qris') {
+        return {...base, payment_type: 'qris'};
+    } else if (currentTab === 'cstore') {
+        return {...base, payment_type: 'cstore', store: document.querySelector('input[name="cstore"]:checked').value};
+    } else if (currentTab === 'paylater') {
+        return {...base, payment_type: document.querySelector('input[name="paylater"]:checked').value};
+    }
+}
+
+function processPayment() {
+    hideError();
+    setLoading(true);
+
+    if (currentTab === 'cc') {
+        const cardNumber = document.getElementById('card_number').value.replace(/\s/g, '');
+        const expMonth = document.getElementById('card_exp_month').value;
+        const expYear = document.getElementById('card_exp_year').value;
+        const cvv = document.getElementById('card_cvv').value;
+
+        if (!cardNumber || !expMonth || !expYear || !cvv) {
+            showError('Please fill in all card details');
+            setLoading(false);
+            return;
+        }
+
+        MidtransNew3ds.getCardToken({
+            card_number: cardNumber,
+            card_cvv: cvv,
+            card_exp_month: expMonth,
+            card_exp_year: expYear,
+        }, {
+            onSuccess: function(response) {
+                const payload = buildPayload();
+                payload.token_id = response.token_id;
+                sendCharge(payload);
+            },
+            onFailure: function(response) {
+                showError('Card tokenization failed: ' + (response.status_message || JSON.stringify(response)));
+                setLoading(false);
+            }
+        });
+    } else {
+        sendCharge(buildPayload());
+    }
+}
+
+function sendCharge(payload) {
+    fetch('{% url "checkout" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: JSON.stringify(payload),
+    })
+    .then(r => r.json().then(data => ({status: r.status, data})))
+    .then(({status, data}) => {
+        setLoading(false);
+
+        if (data.error) {
+            showError(data.error);
+            return;
+        }
+
+        // Redirect-based payments (ShopeePay, DANA, Akulaku, Kredivo)
+        if (data.redirect_url && data.payment_type !== 'credit_card') {
+            window.location.href = data.redirect_url;
+            return;
+        }
+
+        // Credit card 3DS
+        if (data.redirect_url && data.payment_type === 'credit_card') {
+            setLoading(true);
+            MidtransNew3ds.authenticate(data.redirect_url, {
+                performAuthentication: function(redirect_url) {
+                    open3dsModal(redirect_url);
+                },
+                onSuccess: function(response) {
+                    close3dsModal();
+                    window.location.href = data.status_url;
+                },
+                onFailure: function(response) {
+                    close3dsModal();
+                    setLoading(false);
+                    showError('3DS authentication failed: ' + (response.status_message || ''));
+                },
+                onPending: function(response) {
+                    close3dsModal();
+                    window.location.href = data.status_url;
+                }
+            });
+            return;
+        }
+
+        // Default: go to status page
+        window.location.href = data.status_url;
+    })
+    .catch(err => {
+        setLoading(false);
+        showError('Network error: ' + err.message);
+    });
+}
+
+// Radio button visual selection
+document.querySelectorAll('.tab-panel input[type="radio"]').forEach(r => {
+    r.addEventListener('change', function() {
+        const group = this.getAttribute('name');
+        document.querySelectorAll(`input[name="${group}"]`).forEach(input => {
+            const label = input.closest('label');
+            if (label) {
+                label.style.borderColor = '';
+                label.style.background = '';
+            }
+        });
+        const label = this.closest('label');
+        if (label) {
+            label.style.borderColor = '#2563EB';
+            label.style.background = '#eff6ff';
+        }
+    });
+});
+
+// Trigger initial styling
+document.querySelectorAll('input[type="radio"]:checked').forEach(r => r.dispatchEvent(new Event('change')));
+
+// Card number formatting
+document.getElementById('card_number').addEventListener('input', function(e) {
+    let val = e.target.value.replace(/\D/g, '').substring(0, 16);
+    e.target.value = val.replace(/(.{4})/g, '$1 ').trim();
+});
+</script>
+{% endblock %}
