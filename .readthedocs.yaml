@@ -7,13 +7,9 @@ build:
   os: ubuntu-24.04
   tools:
     python: "3.12"
-
-sphinx:
-  configuration: docs/conf.py
-
-python:
-  install:
-    - method: pip
-      path: .
-      extra_requirements:
-        - docs
+  commands:
+    # Install the package with docs extras
+    - pip install .[docs]
+    # Build without parallel mode (-j auto) to avoid Django AppRegistryNotReady
+    # in forked child processes. Django's app registry doesn't survive fork().
+    - python -m sphinx -T -b html -d docs/_build/doctrees -D language=en docs $READTHEDOCS_OUTPUT/html
