@@ -1,33 +1,6 @@
 # Sphinx configuration for django-payment-midtrans
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
-import os
-import sys
-
-# Add the project root to sys.path so autodoc can find the package
-sys.path.insert(0, os.path.abspath(".."))
-sys.path.insert(0, os.path.abspath("../example"))
-
-# Mock Django setup for autodoc
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "example.config.settings")
-
-# Ensure dotenv doesn't fail if .env file is missing
-os.environ.setdefault("MIDTRANS_SERVER_KEY", "")
-os.environ.setdefault("MIDTRANS_CLIENT_KEY", "")
-os.environ.setdefault("MIDTRANS_MERCHANT_ID", "")
-os.environ.setdefault("MIDTRANS_IS_PRODUCTION", "False")
-os.environ.setdefault("MIDTRANS_NOTIFICATION_URL", "")
-os.environ.setdefault("CELERY_BROKER_URL", "memory://")
-os.environ.setdefault("DJANGO_SECRET_KEY", "sphinx-build-key")
-os.environ.setdefault("DJANGO_DEBUG", "True")
-os.environ.setdefault("DJANGO_ALLOWED_HOSTS", "*")
-
-import django
-try:
-    django.setup()
-except Exception:
-    pass
-
 # -- Project information -----------------------------------------------------
 
 project = "django-payment-midtrans"
@@ -38,9 +11,6 @@ release = "1.0.0"
 # -- General configuration ---------------------------------------------------
 
 extensions = [
-    "sphinx.ext.autodoc",
-    "sphinx.ext.viewcode",
-    "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinx_copybutton",
     "myst_parser",
@@ -80,11 +50,6 @@ html_context = {
     "conf_py_path": "/docs/",
 }
 
-# -- Napoleon settings (Google/NumPy docstrings) ----------------------------
-
-napoleon_google_docstring = True
-napoleon_numpy_docstring = False
-
 # -- Intersphinx mapping ----------------------------------------------------
 
 intersphinx_mapping = {
@@ -92,11 +57,4 @@ intersphinx_mapping = {
     "celery": ("https://docs.celeryq.dev/en/stable/", None),
 }
 
-# -- Autodoc settings --------------------------------------------------------
 
-autodoc_member_order = "bysource"
-autodoc_default_options = {
-    "members": True,
-    "undoc-members": False,
-    "show-inheritance": True,
-}
